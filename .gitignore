@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Saídas geradas localmente
+saidas/*
+!saidas/.gitkeep
+
+
+dados/bruto/

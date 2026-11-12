@@ -1,0 +1,8 @@
+# Python >= 3.10
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.2
+matplotlib>=3.7
+requests>=2.31
+# opc rodar o notebook
+jupyter>=1.0
