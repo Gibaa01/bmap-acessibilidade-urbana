@@ -34,13 +34,13 @@ import pandas as pd
 def _achar_raiz() -> Path:
     inicio = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd().resolve()
     for pasta in [inicio, *inicio.parents]:
-        if (pasta / "modulo1_data_science").is_dir():
+        if (pasta / "data-science").is_dir():
             return pasta
     return inicio
 
 
 RAIZ = _achar_raiz()
-sys.path.insert(0, str(RAIZ / "modulo1_data_science"))
+sys.path.insert(0, str(RAIZ / "data-science"))
 
 from features_acessibilidade import (  # noqa: E402
     FEATURES_BINARIAS, FEATURES_CATEGORICAS, FEATURES_MODELO, FEATURES_NUMERICAS,
@@ -58,7 +58,7 @@ pd.set_option("display.max_columns", 30)
 
 if not ARQ_CSV.exists():
     raise FileNotFoundError(
-        f"{ARQ_CSV} não encontrado. Rode antes: python modulo1_data_science/coletar_dados_reais.py")
+        f"{ARQ_CSV} não encontrado. Rode antes: python data-science/coletar_dados_reais.py")
 
 # %% [markdown]
 # ## 1. Carga e auditoria de qualidade dos dados reais

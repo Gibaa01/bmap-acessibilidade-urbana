@@ -1,0 +1,14 @@
+{
+  "titulo": "Paradas e estacoes de transporte publico - entorno da area",
+  "fonte": "OpenStreetMap contributors, via Overpass API",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "licenca": "Open Database License (ODbL) 1.0 - https://opendatacommons.org/licenses/odbl/1-0/",
+  "atribuicao": "(c) OpenStreetMap contributors - https://www.openstreetmap.org/copyright",
+  "data_extracao_utc": "2026-11-13T22:07:18+00:00",
+  "bbox_sul_oeste_norte_leste": "-23.62,-46.72,-23.5,-46.58",
+  "query_sha256": "c77960e43d49ae4f",
+  "n_registros": 4838,
+  "lgpd": "Somente estabelecimentos; sem dados pessoais; sem telefones/e-mails; sem metadados de editores",
+  "ausencia_de_tag": "nao_informado = tag inexistente no OSM (nao verificado), NAO significa inacessivel",
+  "script": "coletar_dados_reais.py v1.0.0"
+}

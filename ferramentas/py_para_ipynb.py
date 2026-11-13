@@ -3,7 +3,7 @@ Converte um script no formato "percent" (células delimitadas por `# %%`,
 compatível com VS Code, Spyder e Jupytext) em um notebook Jupyter (.ipynb).
 
 O .py é a fonte da verdade (diffs legíveis no Git); o .ipynb é gerado:
-    python ferramentas/py_para_ipynb.py modulo1_data_science/analise_acessibilidade.py
+    python ferramentas/py_para_ipynb.py data-science/analise_acessibilidade.py
 Sem dependências além da biblioteca padrão.
 """
 import json

@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "modulo1_data_science"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "data-science"))
 import coletar_dados_reais as coleta  # noqa: E402
 import features_acessibilidade as fa  # noqa: E402
 

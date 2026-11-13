@@ -27,8 +27,8 @@ LGPD (Lei 13.709/2018)
 
 USO
 ---
-    python modulo1_data_science/coletar_dados_reais.py
-    python modulo1_data_science/coletar_dados_reais.py --bbox -23.585 -46.665 -23.552 -46.622
+    python data-science/coletar_dados_reais.py
+    python data-science/coletar_dados_reais.py --bbox -23.585 -46.665 -23.552 -46.622
 """
 from __future__ import annotations
 
