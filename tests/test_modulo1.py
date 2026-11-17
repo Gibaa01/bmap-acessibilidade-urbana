@@ -52,6 +52,13 @@ class TestColeta(unittest.TestCase):
         self.assertEqual(coleta.normalizar_valor("limited;yes"), "limitado")
         self.assertEqual(coleta.normalizar_valor(np.nan), "nao_informado")
 
+    def test_n_tags_contexto_ignora_tags_de_acessibilidade(self):
+        base = {"amenity": "bank", "name": "B", "opening_hours": "24/7"}
+        com_acess = {**base, "wheelchair": "yes", "wheelchair:description": "rampa lateral",
+                     "toilets:wheelchair": "yes", "tactile_paving": "yes"}
+        self.assertEqual(coleta.contar_tags_contexto(base), 2)          # amenity + opening_hours
+        self.assertEqual(coleta.contar_tags_contexto(com_acess), 2)     # tags de acessibilidade não contam
+
     def test_csv_com_metadados_ida_e_volta(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:

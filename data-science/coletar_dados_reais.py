@@ -244,7 +244,21 @@ def _para_float(valor):
 
 CHAVES_CONTATO = ("phone", "contact:phone", "website", "contact:website",
                   "email", "contact:email", "contact:instagram", "contact:facebook")
-CHAVES_EXCLUIDAS_DA_CONTAGEM = set(COLUNAS_BRUTAS_OSM) | {"name"}
+
+# `n_tags_contexto` é FEATURE do modelo, então não pode contar nenhuma tag que
+# descreva acessibilidade (nem as 6 que compõem o alvo, nem as irmãs como
+# `wheelchair:description` ou `toilets:wheelchair:lockable`): contá-las faria o
+# alvo "vazar" para o X de forma indireta.
+PREFIXOS_TAGS_ACESSIBILIDADE = ("wheelchair", "toilets:wheelchair", "ramp", "tactile_paving",
+                                "tactile_writing", "braille", "hearing_loop", "blind", "deaf")
+
+
+def eh_tag_de_acessibilidade(chave: str) -> bool:
+    return chave.startswith(PREFIXOS_TAGS_ACESSIBILIDADE)
+
+
+def contar_tags_contexto(tags: Dict[str, str]) -> int:
+    return sum(1 for k in tags if k != "name" and not eh_tag_de_acessibilidade(k))
 
 
 def processar_estabelecimentos(elementos: List[dict], omitir_nome_consultorio: bool = True) -> pd.DataFrame:
@@ -285,7 +299,7 @@ def processar_estabelecimentos(elementos: List[dict], omitir_nome_consultorio: b
         linha["tem_horario"] = int("opening_hours" in tags)
         linha["tem_contato"] = int(any(k in tags for k in CHAVES_CONTATO))  # só o booleano (LGPD)
         linha["tem_operador"] = int(any(k in tags for k in ("operator", "brand", "network")))
-        linha["n_tags_contexto"] = sum(1 for k in tags if k not in CHAVES_EXCLUIDAS_DA_CONTAGEM)
+        linha["n_tags_contexto"] = contar_tags_contexto(tags)
         linha["building_levels"] = _para_float(tags.get("building:levels"))
         linhas.append(linha)
 

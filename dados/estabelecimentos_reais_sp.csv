@@ -3,10 +3,10 @@
 # endpoint: https://overpass-api.de/api/interpreter
 # licenca: Open Database License (ODbL) 1.0 - https://opendatacommons.org/licenses/odbl/1-0/
 # atribuicao: (c) OpenStreetMap contributors - https://www.openstreetmap.org/copyright
-# data_extracao_utc: 2026-11-13T22:07:18+00:00
+# data_extracao_utc: 2026-11-16T13:36:53+00:00
 # bbox_sul_oeste_norte_leste: -23.62,-46.72,-23.5,-46.58
 # query_sha256: 99ebd8080ce7a966
-# n_registros: 2211
+# n_registros: 2212
 # lgpd: Somente estabelecimentos; sem dados pessoais; sem telefones/e-mails; sem metadados de editores
 # ausencia_de_tag: nao_informado = tag inexistente no OSM (nao verificado), NAO significa inacessivel
 # script: coletar_dados_reais.py v1.0.0
@@ -1095,6 +1095,7 @@ node,14319917668,https://www.openstreetmap.org/node/14319917668,Drogasil,farmaci
 node,14334224862,https://www.openstreetmap.org/node/14334224862,[consultorio - nome omitido (LGPD)],clinica,dentist,dentist,,-23.5952124,-46.6376934,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,1,1,0,14,,0,nao_informada,151.6,186.0
 node,14345946601,https://www.openstreetmap.org/node/14345946601,FISIOQUIRO - Fisioterapia & Quiropraxia,clinica,,physiotherapist,,-23.5397745,-46.6080155,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,1,1,0,6,,0,nao_informada,75.3,93.4
 node,14349903289,https://www.openstreetmap.org/node/14349903289,[consultorio - nome omitido (LGPD)],clinica,dentist,dentist,,-23.586434,-46.61096,,,,,,,,,no,nao,1,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,0,1,0,11,,1,auditada,102.3,216.7
+node,14380664502,https://www.openstreetmap.org/node/14380664502,AmorSaúde SP Ipiranga,clinica,clinic,,,-23.599234,-46.5997006,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,1,1,0,6,,0,nao_informada,44.9,100.3
 way,33910102,https://www.openstreetmap.org/way/33910102,Instituto Dante Pazzanese de Cardiologia,hospital,hospital,hospital,,-23.5845869,-46.6515581,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,0,1,1,14,,0,nao_informada,123.0,1117.8
 way,34874691,https://www.openstreetmap.org/way/34874691,Associação Cristã de Moços,servico_publico,social_facility,,,-23.5210815,-46.718812,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,0,1,0,10,,0,nao_informada,105.1,347.1
 way,46892375,https://www.openstreetmap.org/way/46892375,Câmara Municipal de São Paulo,servico_publico,,,government,-23.5506635,-46.6410681,,,,,,,,,,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,nao_informado,0,0,1,0,15,,0,nao_informada,68.5,188.6
