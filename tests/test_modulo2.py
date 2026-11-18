@@ -1,8 +1,11 @@
 """Testes do Módulo 2. """
+import contextlib
+import io
 import random
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dynamic-programming"))
 import rotas_acessiveis as ra  # noqa: E402
@@ -106,6 +109,109 @@ class TestOverpass(unittest.TestCase):
         g = ra.grafo_de_overpass(dados)
         self.assertEqual(g.n_arestas, 2)                       # via privada ignorada
         self.assertEqual(g.adj[1][0].tag("kerb"), "raised")    # pior caso entre as pontas
+
+
+RESPOSTA_MASP = [{"lat": "-23.5614", "lon": "-46.6559", "display_name": "MASP, Avenida Paulista, São Paulo"}]
+
+
+class TestGeocodificacao(unittest.TestCase):
+    def test_parametros_da_consulta(self):
+        par = ra.montar_parametros_nominatim("Av. Paulista, 1578")
+        self.assertEqual(par["q"], "Av. Paulista, 1578")
+        self.assertEqual(par["limit"], 1)
+        self.assertEqual(par["countrycodes"], "br")
+        w, n, e, s = (float(v) for v in par["viewbox"].split(","))   # esquerda, topo, direita, base
+        self.assertLess(w, e)
+        self.assertGreater(n, s)
+
+    def test_interpreta_resposta_valida(self):
+        self.assertEqual(ra.interpretar_resposta_nominatim(RESPOSTA_MASP),
+                         (-23.5614, -46.6559, "MASP, Avenida Paulista, São Paulo"))
+
+    def test_resposta_vazia_ou_malformada_vira_erro(self):
+        for ruim in ([], None, "texto", [{"lat": "x", "lon": "y"}], [{}]):
+            with self.assertRaises(ra.ErroGeocodificacao):
+                ra.interpretar_resposta_nominatim(ruim)
+
+    def test_geocodificar_com_servico_simulado(self):
+        chamadas = []
+
+        def falso(params):
+            chamadas.append(params)
+            return RESPOSTA_MASP
+
+        lat, lon, nome = ra.geocodificar("  MASP, São Paulo  ", consulta=falso)
+        self.assertEqual((lat, lon), (-23.5614, -46.6559))
+        self.assertEqual(chamadas[0]["q"], "MASP, São Paulo")           # espaços removidos
+
+    def test_falha_de_rede_vira_erro_amigavel(self):
+        def sem_rede(params):
+            raise ConnectionError("sem internet")
+
+        with self.assertRaises(ra.ErroGeocodificacao) as ctx:
+            ra.geocodificar("Av. Paulista, 1578", consulta=sem_rede)
+        self.assertIn("latitude e longitude", str(ctx.exception))
+
+    def test_endereco_curto_ou_vazio_nao_consulta_o_servico(self):
+        def nao_deveria_ser_chamado(params):
+            raise AssertionError("não deveria consultar")
+
+        for ruim in ("", "  ", "ab", None):
+            with self.assertRaises(ra.ErroGeocodificacao):
+                ra.geocodificar(ruim, consulta=nao_deveria_ser_chamado)
+
+
+class TestResolverPonto(unittest.TestCase):
+    PADRAO = ("Padrão", -23.0, -46.0)
+
+    def test_coordenadas_tem_prioridade(self):
+        r = ra.resolver_ponto(self.PADRAO, [-23.5, -46.6], "qualquer", geocoder=lambda e: self.fail("não deveria geocodificar"))
+        self.assertEqual(r[1:], (-23.5, -46.6))
+
+    def test_endereco_usa_o_geocoder(self):
+        r = ra.resolver_ponto(self.PADRAO, None, "MASP", geocoder=lambda e: (-23.56, -46.65, "MASP completo"))
+        self.assertEqual(r, ("MASP completo", -23.56, -46.65))
+
+    def test_sem_nada_usa_o_ponto_padrao(self):
+        self.assertEqual(ra.resolver_ponto(self.PADRAO, None, None), self.PADRAO)
+
+
+class TestMainComEndereco(unittest.TestCase):
+    def _executar(self, argv, geocoder):
+        saida = io.StringIO()
+        with mock.patch.object(ra, "geocodificar", geocoder), mock.patch.object(ra.time, "sleep"), \
+                contextlib.redirect_stdout(saida):
+            codigo = ra.main(argv)
+        return codigo, saida.getvalue()
+
+    def test_rota_entre_dois_enderecos(self):
+        pontos = {"origem": (-23.5614, -46.6559, "MASP"), "destino": (-23.5685, -46.6485, "Brigadeiro")}
+        fila = iter([pontos["origem"], pontos["destino"]])
+        codigo, texto = self._executar(["--demo", "--origem-endereco", "MASP", "--destino-endereco", "Brigadeiro",
+                                        "--consultas", "5"], lambda e: next(fila))
+        self.assertEqual(codigo, 0)
+        self.assertIn("Origem : MASP", texto)
+        self.assertIn("Destino: Brigadeiro", texto)
+        self.assertIn("Cadeirante", texto)
+
+    def test_endereco_nao_encontrado_retorna_2_sem_traceback(self):
+        def nao_acha(e):
+            raise ra.ErroGeocodificacao("endereço não encontrado")
+
+        codigo, texto = self._executar(["--demo", "--origem-endereco", "Rua Inexistente 999"], nao_acha)
+        self.assertEqual(codigo, 2)
+        self.assertIn("Erro: endereço não encontrado", texto)
+
+    def test_ponto_longe_da_malha_gera_aviso(self):
+        longe = (-23.65, -46.75, "Longe")
+        codigo, texto = self._executar(["--demo", "--origem-endereco", "Longe", "--consultas", "5"], lambda e: longe)
+        self.assertEqual(codigo, 0)
+        self.assertIn("fora da área coberta", texto)
+
+    def test_coordenadas_e_endereco_juntos_sao_rejeitados(self):
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                ra.main(["--demo", "--origem", "-23.5", "-46.6", "--origem-endereco", "MASP"])
 
 
 if __name__ == "__main__":

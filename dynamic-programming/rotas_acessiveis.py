@@ -425,6 +425,61 @@ class RoteadorAcessivel:
 
 
 # --------------------------------------------------------------------------- #
+# Geocodificação: endereço em texto → (latitude, longitude)  [Nominatim / OSM]
+# --------------------------------------------------------------------------- #
+URL_NOMINATIM = "https://nominatim.openstreetmap.org/search"
+USER_AGENT = "CitizenTech-Rotas/1.0 (academico; ODbL)"   # exigido pela política do Nominatim
+
+
+class ErroGeocodificacao(Exception):
+    """Endereço não encontrado ou serviço de endereços indisponível."""
+
+
+def montar_parametros_nominatim(endereco: str, bbox=None) -> dict:
+    """Função pura: monta os parâmetros da consulta. O viewbox só dá preferência
+    à área da malha (bounded=0); não descarta resultados fora dela."""
+    bbox = BBOX_MALHA_PADRAO if bbox is None else bbox
+    s, w, n, e = bbox
+    return {"q": endereco, "format": "jsonv2", "limit": 1, "countrycodes": "br",
+            "viewbox": f"{w},{n},{e},{s}", "bounded": 0}
+
+
+def interpretar_resposta_nominatim(resposta) -> Tuple[float, float, str]:
+    """Função pura: primeiro resultado → (lat, lon, nome completo)."""
+    if not isinstance(resposta, list) or not resposta:
+        raise ErroGeocodificacao("endereço não encontrado")
+    try:
+        item = resposta[0]
+        return float(item["lat"]), float(item["lon"]), str(item.get("display_name", ""))
+    except (KeyError, TypeError, ValueError) as erro:
+        raise ErroGeocodificacao(f"resposta inesperada do serviço de endereços: {erro!r}") from erro
+
+
+def _consulta_nominatim_http(params: dict) -> list:
+    import requests  # import tardio: só é necessário ao buscar por endereço
+    r = requests.get(URL_NOMINATIM, params=params, timeout=20,
+                     headers={"User-Agent": USER_AGENT, "Accept-Language": "pt-BR"})
+    r.raise_for_status()
+    return r.json()
+
+
+def geocodificar(endereco: str, consulta=_consulta_nominatim_http, bbox=None) -> Tuple[float, float, str]:
+    """Converte um endereço em coordenadas. `consulta` é injetável (testes sem internet)."""
+    endereco = (endereco or "").strip()
+    if len(endereco) < 3:
+        raise ErroGeocodificacao("informe um endereço, ex.: 'Av. Paulista, 1578, São Paulo'")
+    try:
+        resposta = consulta(montar_parametros_nominatim(endereco, bbox))
+    except ErroGeocodificacao:
+        raise
+    except Exception as erro:  # noqa: BLE001 — rede, HTTP ou JSON inválido
+        raise ErroGeocodificacao(
+            f"serviço de endereços indisponível ({erro.__class__.__name__}); "
+            "use --origem/--destino com latitude e longitude") from erro
+    return interpretar_resposta_nominatim(resposta)
+
+
+# --------------------------------------------------------------------------- #
 # Carga da malha: (1) Overpass ao vivo → (2) cache real local → (3) demo offline
 # --------------------------------------------------------------------------- #
 RAIZ = Path(__file__).resolve().parents[1]
@@ -681,6 +736,17 @@ def benchmark_memo(grafo: GrafoUrbano, n_consultas: int = 300, n_origens: int = 
     print(f"Consulta repetida (cadeirante): 1ª = {fria:.3f} ms | 2ª (memo) = {quente:.4f} ms")
 
 
+def resolver_ponto(padrao, coordenadas, endereco, geocoder=None) -> Tuple[str, float, float]:
+    """Define um ponto da consulta. Prioridade: coordenadas > endereço > ponto padrão.
+    Retorna (rótulo, latitude, longitude)."""
+    if coordenadas:
+        return f"({coordenadas[0]:.5f}, {coordenadas[1]:.5f})", coordenadas[0], coordenadas[1]
+    if endereco:
+        lat, lon, nome = (geocoder or geocodificar)(endereco)
+        return (nome or endereco), lat, lon
+    return padrao
+
+
 def main(argv=None) -> int:
     import argparse
     ap = argparse.ArgumentParser(description="Rotas acessíveis com Dijkstra + memoização (OSM).")
@@ -690,8 +756,24 @@ def main(argv=None) -> int:
     grupo.add_argument("--demo", action="store_true", help="forçar o subgrafo ilustrativo offline")
     ap.add_argument("--origem", nargs=2, type=float, metavar=("LAT", "LON"))
     ap.add_argument("--destino", nargs=2, type=float, metavar=("LAT", "LON"))
+    ap.add_argument("--origem-endereco", metavar="TEXTO",
+                    help="endereço de origem, ex.: \"Av. Paulista, 1578, São Paulo\" (usa o Nominatim/OSM)")
+    ap.add_argument("--destino-endereco", metavar="TEXTO", help="endereço de destino")
     ap.add_argument("--consultas", type=int, default=300)
     args = ap.parse_args(argv)
+    if args.origem and args.origem_endereco:
+        ap.error("use --origem OU --origem-endereco, não os dois")
+    if args.destino and args.destino_endereco:
+        ap.error("use --destino OU --destino-endereco, não os dois")
+
+    try:  # resolve os endereços antes de carregar a malha (falha rápido)
+        rotulo_o, lat_o, lon_o = resolver_ponto(PONTO_ORIGEM, args.origem, args.origem_endereco, geocodificar)
+        if args.origem_endereco and args.destino_endereco:
+            time.sleep(1.1)  # política do Nominatim: no máximo 1 requisição por segundo
+        rotulo_d, lat_d, lon_d = resolver_ponto(PONTO_DESTINO, args.destino, args.destino_endereco, geocodificar)
+    except ErroGeocodificacao as erro:
+        print(f"Erro: {erro}")
+        return 2
 
     modo = "online" if args.online else "cache" if args.cache else "demo" if args.demo else "auto"
     grafo = carregar_grafo(modo)
@@ -702,14 +784,14 @@ def main(argv=None) -> int:
         print("⚠ Malha ILUSTRATIVA: serve para demonstrar o algoritmo, não descreve calçadas reais.")
 
     componente = grafo.maior_componente()
-    lat_o, lon_o = args.origem or PONTO_ORIGEM[1:]
-    lat_d, lon_d = args.destino or PONTO_DESTINO[1:]
     origem = grafo.no_mais_proximo(lat_o, lon_o, componente)
     destino = grafo.no_mais_proximo(lat_d, lon_d, componente)
-    print(f"Origem : {PONTO_ORIGEM[0] if not args.origem else (lat_o, lon_o)} → {grafo.nome(origem)} "
-          f"({haversine_m(lat_o, lon_o, *grafo.nos[origem]):.0f} m do ponto)")
-    print(f"Destino: {PONTO_DESTINO[0] if not args.destino else (lat_d, lon_d)} → {grafo.nome(destino)} "
-          f"({haversine_m(lat_d, lon_d, *grafo.nos[destino]):.0f} m do ponto)")
+    for rotulo_ponto, no, lat, lon, titulo in ((rotulo_o, origem, lat_o, lon_o, "Origem "),
+                                               (rotulo_d, destino, lat_d, lon_d, "Destino")):
+        dist = haversine_m(lat, lon, *grafo.nos[no])
+        print(f"{titulo}: {rotulo_ponto} → {grafo.nome(no)} ({dist:.0f} m do ponto)")
+        if dist > 300:
+            print(f"  ⚠ ponto a {dist:.0f} m da malha: fora da área coberta (Bela Vista / Av. Paulista).")
 
     print("\n══ 1. Comparativo de rotas por perfil " + "═" * 54)
     comparar_perfis(RoteadorAcessivel(grafo), origem, destino)
